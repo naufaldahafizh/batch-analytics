@@ -40,9 +40,12 @@ services:
     environment:
       INIT_DAEMON_STEP: setup_spark
       SPARK_MASTER_HOST: spark-master
+      HIVE_METASTORE_URI: thrift://hive-metastore:9083
     depends_on:
       - namenode
       - datanode
+    volumes:
+      - ./conf/hive-site.xml:/opt/spark/conf/hive-site.xml
     networks:
       - hadoop
 
@@ -54,17 +57,24 @@ services:
       - "8081:8081"
     environment:
       SPARK_MASTER: spark://spark-master:7077
+      HIVE_METASTORE_URI: thrift://hive-metastore:9083
     depends_on:
       - spark-master
+    volumes:
+      - ./conf/hive-site.xml:/opt/spark/conf/hive-site.xml
     networks:
       - hadoop
 
   pyspark:
-    image: jupyter/pyspark-notebook:latest
+    build:
+      context: .
+      dockerfile: Dockerfile.pyspark
     container_name: pyspark
     hostname: pyspark
     ports:
       - "8888:8888"
+    volumes:
+      - ./conf/hive-site.xml:/opt/spark/conf/hive-site.xml
     environment:
       SPARK_MASTER: spark://spark-master:7077
     depends_on:
@@ -72,6 +82,7 @@ services:
       - hive-server
     networks:
       - hadoop
+
 
   postgres:
     image: postgres:10
@@ -91,6 +102,7 @@ services:
     image: bde2020/hive:2.3.2-postgresql-metastore
     container_name: hive-metastore
     hostname: hive-metastore
+    command: /opt/hive/bin/hive --service metastore
     environment:
       HIVE_METASTORE_DB_TYPE: postgres
       HIVE_DB: metastore
@@ -104,6 +116,9 @@ services:
     depends_on:
       - postgres
       - namenode
+    volumes:
+      - ./conf/core-site.xml:/opt/hadoop-2.7.4/etc/hadoop/core-site.xml
+      - ./conf/hive-site.xml:/opt/hive/conf/hive-site.xml
     networks:
       - hadoop
 
@@ -117,6 +132,9 @@ services:
       - "10000:10000"
     depends_on:
       - hive-metastore
+    volumes:
+      - ./conf/core-site.xml:/opt/hadoop-2.7.4/etc/hadoop/core-site.xml
+      - ./conf/hive-site.xml:/opt/hive/conf/hive-site.xml
     networks:
       - hadoop
 

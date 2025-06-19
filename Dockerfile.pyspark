@@ -1,0 +1,27 @@
+FROM jupyter/base-notebook:python-3.7.12
+
+# Install Java (required by Spark)
+USER root
+RUN apt-get update && apt-get install -y openjdk-8-jdk wget curl && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+ENV JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+ENV PATH=$PATH:$JAVA_HOME/bin
+
+# Install Spark 2.4.0 with Hadoop 2.7
+ENV SPARK_VERSION=2.4.0
+ENV HADOOP_VERSION=2.7
+
+RUN curl -L https://archive.apache.org/dist/spark/spark-${SPARK_VERSION}/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION}.tgz \
+    | tar -xz -C /usr/local/ && \
+    mv /usr/local/spark-${SPARK_VERSION}-bin-hadoop${HADOOP_VERSION} /usr/local/spark
+
+ENV SPARK_HOME=/usr/local/spark
+ENV PATH=$PATH:$SPARK_HOME/bin:$SPARK_HOME/sbin
+ENV PYSPARK_PYTHON=python3
+
+# Jupyter will run as jovyan
+USER $NB_UID
+
+# Set Spark master via environment (can be overridden in docker-compose)
+ENV SPARK_MASTER=spark://spark-master:7077
